@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import joi from "joi";
 import express from "express";
 import { MongoClient } from "mongodb";
@@ -35,6 +36,9 @@ app.post("/signUp",async(req,res)=>{
         await accounts.insertOne(
             { name: name, email:email,password:cryptPassword }
         );
+        await db.collection(name).insertOne(
+            {created:true}
+        );
         res.sendStatus(201);
 
     } catch (err) { res.sendStatus(500) }
@@ -47,10 +51,54 @@ app.post("/login",async(req,res)=>{
 
         console.log("PESQUISA FEITA")
         if(user && bcrypt.compareSync(password, user.password)) {
-            res.sendStatus(200)
+            
+            res.send({name:user.name}).status(200)
         } else {
             res.sendStatus(401)
         }
+    }catch(err){res.sendStatus(500)}
+})
+
+app.get("/info",async(req,res)=>{
+    console.log(req.headers);
+    const name = req.headers.name;
+    console.log(name)
+    try{
+        const info = await db.collection(name).find().toArray();
+        res.send(info).status(200)
+
+    }catch(err){res.sendStatus(500)}
+})
+
+app.post("/withdraw",async(req,res)=>{
+    const name = req.headers.name;
+    const {value, description} = req.body;
+    const day = dayjs();
+    try{
+        await db.collection(name).insertOne(
+            {
+                value:-value,
+                description:description,
+                date: day.format("DD/MM")
+            }
+        )
+        res.sendStatus(200);
+    }catch(err){res.sendStatus(500)}
+})
+
+app.post("/deposit",async(req,res)=>{
+    const name = req.headers.name;
+    const {value, description} = req.body;
+    const day = dayjs();
+    try{
+        await db.collection(name).insertOne(
+            {
+                value:parseFloat(value),
+                description:description,
+                date: day.format("DD/MM")
+            }
+        )
+        res.sendStatus(200);
     }catch(err){res.sendStatus(500)}
 })
 
